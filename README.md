@@ -34,3 +34,14 @@ Use any static hosting for the Vite build:
 npm run build
 ```
 The build output is in `dist/`.
+
+## Docs
+
+Full documentation lives in `docs/README.md`.
+
+
+## ⚖️ License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+This project is under the **MIT License**.
