@@ -2,7 +2,7 @@
 
 Miniko is a platform that lets you paste code in multiple languages and see how it executes step by step, with visual traces, state, and output. It also includes Miniko AI for clear explanations.
 
-#Currently in development so bugs may appear, feel free to report any issues!
+##Currently in development so bugs may appear, feel free to report any issues!
 
 ## Features
 - Multi-language detection: Python, TypeScript, Java, C, C++, C#, Go, Rust
