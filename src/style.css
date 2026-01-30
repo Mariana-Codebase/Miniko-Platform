@@ -146,18 +146,67 @@ body.theme-dark .pill {
 .hero-title {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.hero-brand-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .hero-badge {
   display: inline-flex;
-  align-self: flex-start;
+  align-self: center;
   background: #111111;
   color: #ffffff;
   padding: 6px 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 12px;
+  text-align: center;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-brand-tight {
+  gap: 16px;
+}
+
+.hero-logo {
+  width: 110px;
+  height: 110px;
+  border-radius: 16px;
+  object-fit: contain;
+  padding: 6px;
+  border: 3px solid #2a2a29;
+  background: #ffde59;
+  box-shadow: 6px 6px 0 #2a2a29;
+}
+
+body.theme-dark .hero-logo {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: #ffde59;
+  box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.2);
 }
 
 .hero h1 {
@@ -1207,5 +1256,15 @@ body.theme-dark .self-test.fail {
 
   .hero-actions {
     align-self: flex-end;
+  }
+
+  .hero-header {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-logo {
+    width: 96px;
+    height: 96px;
   }
 }

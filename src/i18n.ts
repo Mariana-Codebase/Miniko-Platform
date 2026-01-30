@@ -6,7 +6,7 @@ export type Locale = 'es' | 'en'
 const TRANSLATIONS: Record<Locale, Record<string, string>> = {
   es: {
     title: 'Plataforma Miniko',
-    subtitle: 'Visualiza la ejecución paso a paso para aprender mejor.',
+    subtitle: 'Miniko es un visualizador educativo que muestra la ejecución paso a paso con estado y salida, ideal para aprender.',
     pill: '',
     blocksTitle: 'Bloques de código',
     supportedLabel: 'Lenguajes soportados',
@@ -64,7 +64,7 @@ const TRANSLATIONS: Record<Locale, Record<string, string>> = {
   },
   en: {
     title: 'Miniko Platform',
-    subtitle: 'Visualize execution step by step to learn faster.',
+    subtitle: 'Miniko is an educational visualizer that shows step-by-step execution with state and output, ideal for learning.',
     pill: '',
     blocksTitle: 'Code blocks',
     supportedLabel: 'Supported languages',

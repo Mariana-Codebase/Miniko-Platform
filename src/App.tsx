@@ -118,15 +118,22 @@ export function App() {
     <div className="app">
       <header className="hero">
         <div className="hero-title">
-          <span className="hero-badge">Miniko</span>
-          <h1>{t('title')}</h1>
-          <p className="hero-subtitle">{t('subtitle')}</p>
-          <div className="supported">
-            <span className="supported-label">{t('supportedLabel')}</span>
-            <span className="supported-chip">Python</span>
-            <span className="supported-chip">TypeScript</span>
-            <span className="supported-chip">Java</span>
-            <span className="supported-chip">Rust</span>
+          <div className="hero-header">
+            <div className="hero-brand-stack">
+              <img className="hero-logo" src="/favicon.png" alt="Miniko logo" />
+              <span className="hero-badge">Miniko</span>
+            </div>
+            <div className="hero-text">
+              <h1>{t('title')}</h1>
+              <p className="hero-subtitle">{t('subtitle')}</p>
+              <div className="supported">
+                <span className="supported-label">{t('supportedLabel')}</span>
+                <span className="supported-chip">Python</span>
+                <span className="supported-chip">TypeScript</span>
+                <span className="supported-chip">Java</span>
+                <span className="supported-chip">Rust</span>
+              </div>
+            </div>
           </div>
         </div>
         <div className="hero-actions">
