@@ -6,9 +6,9 @@ support may occur. If something fails, reduce the code to a minimal example and
 step through the execution.
 
 What is Miniko?
-Miniko is an educational visualizer that interprets a subset of several
-languages to show state and output step by step. It is not a real compiler or a
-professional debugger.
+Miniko is an educational visualizer that interprets a subset of Python, Java,
+TypeScript, and Rust to show state and output step by step. It is not a real
+compiler or a professional debugger.
 
 Ideal for desktop, responsive on any device
 The interface is designed for desktop because it shows multiple panels at once,
@@ -37,13 +37,6 @@ Java
 TypeScript
 - Assignments, simple arrays, basic operations.
 - console.log.
-
-C / C++ / C#
-- Numeric assignments, basic arrays, if, for.
-- printf, std::cout, Console.WriteLine.
-
-Go
-- Basic slices, len, classic for, fmt.Print/Println.
 
 Rust
 - vec!, range for, and for over simple lists.

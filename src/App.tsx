@@ -1,122 +1,54 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './style.css'
 import { useI18n } from './i18n'
 import type { MinikoTraceEntry } from './lib/minikoInterpreter'
-import type { JsRunResult } from './lib/jsSandbox'
 
-const DEFAULT_CODE = `# Python Demo - Listas y bucles
-numeros = [10, 20, 30, 40, 50]
-suma = 0
-for num in numeros:
-  suma += num
-  print(f"Sumando {num}, total: {suma}")
-print(f"Suma final: {suma}")`
+const DEFAULT_CODE = `# Python Demo - Promedio con listas y condiciones
+notas = [90, 75, 88, 92, 60]
+total = 0
+for nota in notas:
+  total += nota
+promedio = total / len(notas)
+if promedio >= 80:
+  print(f"Promedio alto: {promedio}")
+else:
+  print(f"Promedio a mejorar: {promedio}")`
 
 const DEFAULT_JAVA = `public class Main {
   public static void main(String[] args) {
-    int[] numeros = {5, 10, 15, 20};
-    int maximo = numeros[0];
-    for (int i = 1; i < numeros.length; i++) {
-      if (numeros[i] > maximo) {
-        maximo = numeros[i];
+    int[] edades = {18, 21, 16, 30, 25};
+    int adultos = 0;
+    for (int i = 0; i < edades.length; i++) {
+      if (edades[i] >= 18) {
+        adultos++;
       }
     }
-    System.out.println("El máximo es: " + maximo);
+    System.out.println("Adultos: " + adultos);
   }
 }`
 
-const DEFAULT_TS = `// TypeScript Demo - Funciones y tipos
-function calcularPromedio(numeros: number[]): number {
-  let suma = 0;
-  for (let i = 0; i < numeros.length; i++) {
-    suma += numeros[i];
-  }
-  return suma / numeros.length;
+const DEFAULT_TS = `// TypeScript Demo - Reducir y formatear salida
+const precios: number[] = [12.5, 8, 20, 5.5];
+let total = 0;
+for (let i = 0; i < precios.length; i++) {
+  total += precios[i];
 }
-const valores = [10, 20, 30, 40];
-const promedio = calcularPromedio(valores);
-console.log("Promedio:", promedio);`
+const promedio = total / precios.length;
+console.log(\`Total: \${total}, Promedio: \${promedio}\`);`
 
-const DEFAULT_C = `// C Demo - Arrays y búsqueda
-#include <stdio.h>
-int main() {
-  int arr[] = {3, 7, 2, 9, 5};
-  int buscar = 9;
-  int encontrado = 0;
-  for (int i = 0; i < 5; i++) {
-    if (arr[i] == buscar) {
-      encontrado = 1;
-      printf("Encontrado en posición %d\\n", i);
-    }
-  }
-  if (!encontrado) {
-    printf("No encontrado\\n");
-  }
-  return 0;
-}`
-
-const DEFAULT_CPP = `#include <iostream>
-
-int main() {
-int factorial = 1;
-int n = 5;
-for (int i = 1; i <= n; i++) {
-  factorial *= i;
-  std::cout << "Factorial de " << i << " = " << factorial << std::endl;
-}
-return 0;
-}`
-
-const DEFAULT_CS = `// C# Demo - Listas y filtrado
-using System;
-class Program {
-  static void Main() {
-    int[] numeros = {12, 5, 8, 15, 3, 20};
-    int contador = 0;
-    for (int i = 0; i < numeros.Length; i++) {
-      if (numeros[i] > 10) {
-        contador++;
-        Console.WriteLine(numeros[i]);
-      }
-    }
-    Console.WriteLine(contador);
-  }
-}`
-
-const DEFAULT_GO = `// Go Demo - Slices y funciones
-package main
-import "fmt"
-func main() {
-  numeros := []int{2, 4, 6, 8, 10}
-  producto := 1
-  for i := 0; i < len(numeros); i++ {
-    producto *= numeros[i]
-    fmt.Println("Multiplicando", numeros[i], "producto", producto)
-  }
-  fmt.Println("Producto final", producto)
-}`
-
-const DEFAULT_RUST = `// Rust Demo - Vectores y iteración
+const DEFAULT_RUST = `// Rust Demo - Rangos y formato
 fn main() {
-  let numeros = vec![1, 3, 5, 7, 9];
-  let mut suma_pares = 0;
-  let mut suma_impares = 0;
-  for num in numeros {
-    if num % 2 == 0 {
-      suma_pares += num;
-    } else {
-      suma_impares += num;
-    }
+  let mut suma = 0;
+  for i in 1..=5 {
+    suma += i;
   }
-  println!("Suma impares: {}", suma_impares);
-  println!("Suma pares: {}", suma_pares);
+  let promedio = suma as f64 / 5.0;
+  println!("Suma: {}, Promedio: {}", suma, promedio);
 }`
-
-type Runnable = 'js' | null
 type DetectedLanguage = {
   id: string
   label: string
-  runnable: Runnable
+  supported: boolean
 }
 type TraceValue = number | string | number[]
 const MAX_STEPS = 15
@@ -146,13 +78,6 @@ export function App() {
   const [code, setCode] = useState(DEFAULT_CODE)
   const [genericTrace, setGenericTrace] = useState<VisualTraceEntry[]>([])
   const [activeStep, setActiveStep] = useState(0)
-  const [jsResult, _setJsResult] = useState<JsRunResult | null>(null)
-  const [aiPrompt, setAiPrompt] = useState('')
-  const [aiAnswer, setAiAnswer] = useState('')
-  const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [aiOpen, setAiOpen] = useState(false)
-  const [aiCode, setAiCode] = useState(code)
-  const lastSyncedCodeRef = useRef(code)
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -170,73 +95,8 @@ export function App() {
   useEffect(() => {
     const trace = buildTraceForCode(code, detected.id, locale)
     setGenericTrace(trace)
-    setActiveStep(trace.length > 0 ? 0 : 0)
+    setActiveStep(0)
   }, [code, locale, detected.id])
-
-  useEffect(() => {
-    if (aiCode === lastSyncedCodeRef.current) {
-      setAiCode(code)
-      lastSyncedCodeRef.current = code
-    }
-  }, [code, aiCode])
-
-  const handleAiExplain = async () => {
-    setAiStatus('loading')
-    setAiAnswer('')
-
-    const prompt = aiPrompt || t('aiDefaultPrompt')
-    const workingCode = aiCode
-    const aiDetected = detectLanguage(workingCode, locale)
-
-    try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ locale, code: workingCode, prompt }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Remote AI not available')
-      }
-
-      const data = (await response.json()) as { answer?: string }
-      const rawAnswer = data.answer ?? t('aiFallback')
-      const finalAnswer = normalizeAiAnswer(rawAnswer, prompt, workingCode, aiDetected.id, locale)
-      setAiAnswer(finalAnswer)
-      setAiStatus('idle')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      let friendlyMessage = message
-      const trimmed = message.trim()
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        try {
-          const parsed = JSON.parse(trimmed) as {
-            error?: { code?: number; message?: string }
-          }
-          if (parsed?.error?.code === 429) {
-            friendlyMessage = t('aiRateLimited')
-          } else if (parsed?.error?.code === 402) {
-            friendlyMessage = t('aiInsufficientCredits')
-          } else if (parsed?.error?.message) {
-            friendlyMessage = parsed.error.message
-          }
-        } catch {
-          friendlyMessage = message
-        }
-      } else if (/rate-?limit/i.test(message)) {
-        friendlyMessage = t('aiRateLimited')
-      } else if (/credits|insufficient|402/i.test(message)) {
-        friendlyMessage = t('aiInsufficientCredits')
-      }
-      const quick = buildLocalExplanation(workingCode, locale)
-      const fallback = normalizeAiAnswer(quick, prompt, workingCode, aiDetected.id, locale)
-      setAiAnswer(`${t('aiError')}\n${friendlyMessage}\n\n${fallback}`)
-      setAiStatus('error')
-    }
-  }
 
   return (
     <div className="app">
@@ -250,10 +110,6 @@ export function App() {
             <span className="supported-chip">Python</span>
             <span className="supported-chip">TypeScript</span>
             <span className="supported-chip">Java</span>
-            <span className="supported-chip">C</span>
-            <span className="supported-chip">C++</span>
-            <span className="supported-chip">C#</span>
-            <span className="supported-chip">Go</span>
             <span className="supported-chip">Rust</span>
           </div>
         </div>
@@ -302,9 +158,6 @@ export function App() {
               <h2>{t('blocksTitle')}</h2>
               <p>{t('blocksDesc')}</p>
             </div>
-            <button className="btn" onClick={() => setAiOpen(true)}>
-              {t('aiExplainBtn')}
-            </button>
           </div>
           <div className="panel-body editor-block">
             <div className="detect-row">
@@ -451,15 +304,9 @@ export function App() {
                   <div className="section-title">{t('output')}</div>
                   <div className="output-content">
                     <pre>
-                      {detected.runnable === 'js'
-                        ? jsResult?.logs?.length
-                          ? jsResult.logs.join('\n')
-                          : t('noOutput')
-                        : genericTrace[activeStep]?.outputsAfter?.length
+                      {genericTrace[activeStep]?.outputsAfter?.length
                         ? genericTrace[activeStep].outputsAfter.join('\n')
                         : t('noOutput')}
-                      {detected.runnable === 'js' && jsResult?.error ? `\n${jsResult.error}` : ''}
-                      {detected.runnable === 'js' && jsResult?.timedOut ? `\n${t('timedOut')}` : ''}
                     </pre>
                   </div>
                 </div>
@@ -468,40 +315,6 @@ export function App() {
           </div>
         </div>
       </section>
-
-      <aside className={aiOpen ? 'ai-drawer open' : 'ai-drawer'}>
-        <div className="ai-drawer-head">
-          <h2>{t('aiTitle')}</h2>
-          <button className="btn" onClick={() => setAiOpen(false)}>
-            {t('aiClose')}
-          </button>
-        </div>
-        <p className="ai-desc">{t('aiDesc')}</p>
-        <label className="field">
-          <span>{t('aiPrompt')}</span>
-          <textarea
-            className="ai-input"
-            value={aiPrompt}
-            onChange={(event) => setAiPrompt(event.target.value)}
-            placeholder={t('aiPromptPlaceholder')}
-          />
-        </label>
-        <div className="field">
-          <span>{t('aiCode')}</span>
-          <textarea
-            className="ai-code"
-            value={aiCode}
-            onChange={(event) => setAiCode(event.target.value)}
-          />
-        </div>
-        <button className="btn primary" onClick={handleAiExplain} disabled={aiStatus === 'loading'}>
-          {aiStatus === 'loading' ? t('aiWorking') : t('aiExplain')}
-        </button>
-        <div className={`ai-answer ${aiStatus === 'error' ? 'warn' : ''}`}>
-          {aiAnswer || t('aiEmpty')}
-        </div>
-      </aside>
-
 
       <section className="panel panel-footer">
         <div>
@@ -515,18 +328,6 @@ export function App() {
             </button>
             <button className="btn" onClick={() => setCode(DEFAULT_TS)}>
               {t('testTs')}
-            </button>
-            <button className="btn" onClick={() => setCode(DEFAULT_C)}>
-              {t('testC')}
-            </button>
-            <button className="btn" onClick={() => setCode(DEFAULT_CPP)}>
-              {t('testCpp')}
-            </button>
-            <button className="btn" onClick={() => setCode(DEFAULT_CS)}>
-              {t('testCs')}
-            </button>
-            <button className="btn" onClick={() => setCode(DEFAULT_GO)}>
-              {t('testGo')}
             </button>
             <button className="btn" onClick={() => setCode(DEFAULT_RUST)}>
               {t('testRust')}
@@ -559,199 +360,43 @@ export function App() {
   )
 }
 
-function buildLocalExplanation(code: string, locale: 'es' | 'en') {
-  const lines = code.split('\n').filter((line) => line.trim().length > 0)
-  const length = lines.length
-  const hasLoops = lines.some((line) => /loop|for|while/i.test(line))
-  const hasConditionals = lines.some((line) => /if|switch|case/i.test(line))
-  const hint = locale === 'es'
-    ? 'Este es un resumen local. Conecta un proveedor IA real para obtener análisis profundo.'
-    : 'This is a local summary. Connect a real AI provider for deeper analysis.'
-  return [
-    locale === 'es'
-      ? `Detecté ${length} líneas activas.`
-      : `Detected ${length} active lines.`,
-    hasLoops
-      ? locale === 'es'
-        ? 'Hay bucles en el flujo.'
-        : 'There are loops in the flow.'
-      : locale === 'es'
-        ? 'No veo bucles explícitos.'
-        : 'No explicit loops found.',
-    hasConditionals
-      ? locale === 'es'
-        ? 'Hay condiciones que afectan la ejecución.'
-        : 'There are conditions affecting execution.'
-      : locale === 'es'
-        ? 'No veo condiciones explícitas.'
-        : 'No explicit conditions found.',
-    hint,
-  ].join(' ')
-}
-
-function normalizeAiAnswer(
-  answer: string,
-  prompt: string,
-  code: string,
-  languageId: string,
-  locale: 'es' | 'en'
-) {
-  const trimmed = answer.trim()
-  const incomplete = isPossiblyIncomplete(code, languageId)
-  if (!trimmed) {
-    return buildAiFallbackAnswer(prompt, code, languageId, locale, incomplete)
-  }
-  if (incomplete && !/incomplet|incomplete|faltan|missing/i.test(trimmed)) {
-    return injectIncompleteNotice(trimmed, locale)
-  }
-  return trimmed
-}
-
-function injectIncompleteNotice(answer: string, locale: 'es' | 'en') {
-  const note =
-    locale === 'es'
-      ? 'Nota: el código parece incompleto.'
-      : 'Note: the code appears incomplete.'
-  return `${note}\n\n${answer}`
-}
-
-function buildAiFallbackAnswer(
-  prompt: string,
-  code: string,
-  languageId: string,
-  locale: 'es' | 'en',
-  incomplete: boolean
-) {
-  const question = prompt.trim() || (locale === 'es' ? 'Sin pregunta' : 'No question')
-  const summary = buildLocalExplanation(code, locale)
-  const steps = buildStepList(code, locale)
-  const output = getOutputFromTrace(code, languageId, locale)
-  const response = locale === 'es'
-    ? `Sobre tu pregunta ("${question}"), el código actual ${incomplete ? 'parece incompleto, así que no se puede responder del todo.' : 'permite una respuesta básica.'}`
-    : `About your question ("${question}"), the current code ${incomplete ? 'appears incomplete, so it cannot be fully answered.' : 'allows a basic answer.'}`
-  const summaryLine = locale === 'es'
-    ? `En resumen, ${summary}`
-    : `In short, ${summary}`
-  const stepsText = steps.join(' ')
-  const outputLine = locale === 'es' ? `Salida: ${output}` : `Output: ${output}`
-  return [response, summaryLine, stepsText, outputLine].join('\n\n')
-}
-
-function buildStepList(code: string, locale: 'es' | 'en') {
-  const lines = code.split('\n').filter((line) => line.trim().length > 0)
-  const limited = lines.slice(0, 6)
-  return limited.map((line, index) => {
-    const trimmed = line.trim()
-    return locale === 'es'
-      ? `En la línea ${index + 1} se ve: ${trimmed}.`
-      : `On line ${index + 1} you can see: ${trimmed}.`
-  })
-}
-
-function getOutputFromTrace(code: string, languageId: string, locale: 'es' | 'en') {
-  try {
-    const trace = buildTraceForCode(code, languageId, locale)
-    const outputs = trace.length ? trace[trace.length - 1].outputsAfter : []
-    if (outputs.length > 0) return outputs.join('\n')
-  } catch {
-    // ignore
-  }
-  return locale === 'es' ? 'Sin salida.' : 'No output.'
-}
-
-function isPossiblyIncomplete(code: string, languageId: string) {
-  const trimmed = code.trim()
-  if (!trimmed) return true
-  if (languageId === 'python') {
-    const lines = code.split('\n')
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i]
-      if (line.trim().endsWith(':')) {
-        const indent = line.match(/^\s*/)?.[0].length ?? 0
-        let found = false
-        for (let j = i + 1; j < lines.length; j += 1) {
-          if (lines[j].trim().length === 0) continue
-          const nextIndent = lines[j].match(/^\s*/)?.[0].length ?? 0
-          if (nextIndent > indent) found = true
-          break
-        }
-        if (!found) return true
-      }
-    }
-  }
-  if (['java', 'c', 'cpp', 'csharp', 'go', 'rust'].includes(languageId)) {
-    let balance = 0
-    for (const char of code) {
-      if (char === '{') balance += 1
-      if (char === '}') balance -= 1
-    }
-    if (balance !== 0) return true
-  }
-  return false
-}
-
 function detectLanguage(code: string, locale: 'es' | 'en'): DetectedLanguage {
   const sample = code.trim()
   if (!sample) {
     return {
       id: 'empty',
       label: locale === 'es' ? 'Sin código' : 'No code',
-      runnable: null,
+      supported: false,
     }
   }
 
   const looksJava =
     /\bpublic\s+class\b|\bpublic\s+static\s+void\s+main\b|System\.out\.println/.test(sample)
   if (looksJava) {
-    return { id: 'java', label: 'Java', runnable: null }
-  }
-
-  const looksCs = /\busing\s+System\b|Console\.Write(Line|)\b/.test(sample)
-  if (looksCs) {
-    return { id: 'csharp', label: 'C#', runnable: null }
-  }
-
-  const looksCpp = /#include\s+<iostream>|std::cout|std::string/.test(sample)
-  if (looksCpp) {
-    return { id: 'cpp', label: 'C++', runnable: null }
-  }
-
-  const looksC = /#include\s+<stdio\.h>|printf\(|scanf\(/.test(sample)
-  if (looksC) {
-    return { id: 'c', label: 'C', runnable: null }
-  }
-
-  const looksGo = /\bpackage\s+main\b|\bfunc\s+main\b|fmt\.Print/.test(sample)
-  if (looksGo) {
-    return { id: 'go', label: 'Go', runnable: null }
+    return { id: 'java', label: 'Java', supported: true }
   }
 
   const looksRust = /\bfn\s+main\b|println!\b|let\s+mut\b/.test(sample)
   if (looksRust) {
-    return { id: 'rust', label: 'Rust', runnable: null }
+    return { id: 'rust', label: 'Rust', supported: true }
   }
 
-  const looksTs =
-    /\binterface\b|\btype\s+\w+\s*=|:\s*(string|number|boolean|any|unknown)\b/.test(sample)
+  const looksTs = /\binterface\b|\btype\s+\w+\s*=|:\s*(string|number|boolean|any|unknown)\b|\b(const|let)\b|console\.log/.test(
+    sample
+  )
   if (looksTs) {
-    return { id: 'typescript', label: 'TypeScript', runnable: null }
+    return { id: 'typescript', label: 'TypeScript', supported: true }
   }
-
 
   const looksPython = /(def\s|\bimport\s|\bprint\(|\belif\b|\bNone\b|:\s*$)/m.test(sample)
   if (looksPython) {
-    return { id: 'python', label: 'Python', runnable: null }
-  }
-
-  const looksSql = /\bselect\b|\bfrom\b|\bwhere\b|\binsert\b|\bupdate\b|\bdelete\b/i.test(sample)
-  if (looksSql) {
-    return { id: 'sql', label: 'SQL', runnable: null }
+    return { id: 'python', label: 'Python', supported: true }
   }
 
   return {
-    id: 'unknown',
-    label: locale === 'es' ? 'Lenguaje desconocido' : 'Unknown language',
-    runnable: null,
+    id: 'unsupported',
+    label: locale === 'es' ? 'No soportado' : 'Unsupported',
+    supported: false,
   }
 }
 
@@ -1087,7 +732,7 @@ function buildJavaTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[] {
     const before = snapshotMap(vars)
     const outputsBefore = [...outputs]
 
-    // Go-style compound assignment (with or without semicolon)
+    // Compound assignment (with or without semicolon)
     const compoundMatch = text.match(/^([A-Za-z_]\w*)\s*([+\-*/])=\s*(.+?);?$/)
     if (compoundMatch) {
       const target = compoundMatch[1]
@@ -1476,7 +1121,7 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
     const before = snapshotMap(vars)
     const outputsBefore = [...outputs]
 
-    // Go-style compound assignment (with or without semicolon)
+    // Compound assignment (with or without semicolon)
     const compoundMatch = text.match(/^([A-Za-z_]\w*)\s*([+\-*/])=\s*(.+?);?$/)
     if (compoundMatch) {
       const target = compoundMatch[1]
@@ -1554,7 +1199,7 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
       return
     }
 
-    // Go-style declaration with := (short variable declaration)
+    // Short variable declaration with :=
     const goDeclMatch = text.match(/^([A-Za-z_]\w*)\s*:=\s*(.+?);?$/)
     if (goDeclMatch) {
       const target = goDeclMatch[1]
@@ -1618,7 +1263,7 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
       return
     }
 
-    // C/C#/C++ array initialization: int[] name = {1, 2}; or int name[] = {1, 2};
+    // Array initialization: int[] name = {1, 2}; or int name[] = {1, 2};
     const arrayInitMatch = text.match(
       /^(?:int|long|float|double)\s*(?:\[\])?\s+([A-Za-z_]\w*)(?:\[\])?\s*=\s*\{([^}]+)\};$/
     )
@@ -1637,7 +1282,9 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
       return
     }
 
-    const declAssign = text.match(/^(?:int|long|float|double|var|let|auto)\s+([A-Za-z_]\w*)\s*=\s*(.+);$/)
+    const declAssign = text.match(
+      /^(?:int|long|float|double|var|let|const|auto)\s+([A-Za-z_]\w*)(?:\s*:\s*[^=]+)?\s*=\s*(.+);$/
+    )
     if (declAssign) {
       const target = declAssign[1]
       const expr = declAssign[2].trim()
@@ -1787,7 +1434,7 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
       }
 
       if (line.startsWith('for ')) {
-        // C-style for loop: for(init; cond; update)
+        // Classic for loop: for(init; cond; update)
         const forMatch = line.match(/^for\s*\((.+);(.+);(.+)\)\s*\{?$/)
         const blockEnd = braceMap.get(index) ?? index
         if (forMatch) {
@@ -1805,7 +1452,7 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
           continue
         }
         
-        // Go-style for loop: for i := 1; i <= 3; i++
+        // For loop with short declaration: for i := 1; i <= 3; i++
         const goForMatch = line.match(/^for\s+([A-Za-z_]\w*)\s*:=\s*(.+?);\s*(.+?);\s*(.+?)\s*\{?$/)
         if (goForMatch) {
           const iterator = goForMatch[1]
@@ -1841,14 +1488,18 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
           continue
         }
         
-        // Rust-style for loop: for i in 1..=3
-        const rustForMatch = line.match(/^for\s+([A-Za-z_]\w*)\s+in\s+(\d+)\.\.=(\d+)\s*\{?$/)
+        // Rust-style for loop: for i in 0..10 or 0..=10
+        const rustForMatch = line.match(
+          /^for\s+([A-Za-z_]\w*)\s+in\s+(.+?)\.\.(=)?(.+?)\s*\{?$/
+        )
         if (rustForMatch) {
           const iterator = rustForMatch[1]
           const startValue = resolveNumeric(rustForMatch[2].trim(), vars)
-          const endValue = resolveNumeric(rustForMatch[3].trim(), vars)
+          const inclusive = Boolean(rustForMatch[3])
+          const endValue = resolveNumeric(rustForMatch[4].trim(), vars)
           const blockEnd = braceMap.get(index) ?? index
-          for (let i = startValue; i <= endValue; i++) {
+          const limit = inclusive ? endValue + 1 : endValue
+          for (let i = startValue; i < limit; i++) {
             const before = snapshotMap(vars)
             const outputsBefore = [...outputs]
             vars.set(iterator, i)
@@ -1907,6 +1558,14 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
 function resolveNumeric(value: string, vars: Map<string, TraceValue>): number {
   const asNumber = Number(value)
   if (!Number.isNaN(asNumber)) return asNumber
+
+  const lenMethodMatch = value.match(/^([A-Za-z_]\w*)\.len\(\)$/)
+  if (lenMethodMatch) {
+    const arrayValue = vars.get(lenMethodMatch[1])
+    if (Array.isArray(arrayValue)) {
+      return arrayValue.length
+    }
+  }
 
   const lengthMatch = value.match(/^([A-Za-z_]\w*)\.(length|Length)$/)
   if (lengthMatch) {
@@ -1990,6 +1649,10 @@ function renderJavaPrint(expr: string, vars: Map<string, TraceValue>) {
 }
 
 function renderCStylePrint(text: string, vars: Map<string, TraceValue>) {
+  const consoleLog = text.match(/^console\.log\((.*)\);?$/)
+  if (consoleLog) {
+    return renderConcatArgs(consoleLog[1], vars)
+  }
   const cPrintf = text.match(/^printf\((.*)\);$/)
   if (cPrintf) {
     return renderPrintf(cPrintf[1], vars)
@@ -2020,12 +1683,18 @@ function renderPrintf(args: string, vars: Map<string, TraceValue>) {
   const parts = splitArgs(args)
   if (parts.length === 0) return ''
   const format = renderValue(parts[0], vars)
-  if (!format.includes('%')) {
+  const hasPercent = format.includes('%')
+  const hasBraces = format.includes('{}')
+  if (!hasPercent && !hasBraces) {
     return [format, ...parts.slice(1).map((part) => renderValue(part, vars))].join(' ').trim()
   }
   let output = format
   for (let i = 1; i < parts.length; i += 1) {
-    output = output.replace(/%[dsf]/, renderValue(parts[i], vars))
+    if (hasPercent) {
+      output = output.replace(/%[dsf]/, renderValue(parts[i], vars))
+    } else if (hasBraces) {
+      output = output.replace(/\{\}/, renderValue(parts[i], vars))
+    }
   }
   return output.replace(/\\n/g, '').trim()
 }
@@ -2093,16 +1762,12 @@ function compare(left: number, right: number, op: string) {
 }
 
 function buildTraceForCode(code: string, languageId: string, locale: 'es' | 'en') {
-  if (languageId === 'java') {
-    return buildJavaTrace(code, locale).slice(0, MAX_STEPS)
-  }
-  if (['c', 'cpp', 'csharp', 'go', 'rust'].includes(languageId)) {
+  if (languageId === 'java') return buildJavaTrace(code, locale).slice(0, MAX_STEPS)
+  if (languageId === 'typescript' || languageId === 'rust') {
     return buildCStyleTrace(code, locale).slice(0, MAX_STEPS)
   }
-  if (languageId === 'typescript') {
-    return buildGenericTrace(code, locale).slice(0, MAX_STEPS)
-  }
-  return buildGenericTrace(code, locale).slice(0, MAX_STEPS)
+  if (languageId === 'python') return buildGenericTrace(code, locale).slice(0, MAX_STEPS)
+  return []
 }
 
 function parseNumericList(content: string, vars: Map<string, TraceValue>) {
@@ -2197,6 +1862,17 @@ function splitArgs(input: string) {
 }
 
 function renderValue(expr: string, vars: Map<string, TraceValue>) {
+  const template = expr.match(/^`([\s\S]*)`$/)
+  if (template) {
+    const rendered = template[1].replace(/\$\{([^}]+)\}/g, (_match, inner) => {
+      const key = inner.trim()
+      const value = vars.get(key)
+      if (value !== undefined) return stringifyValue(value)
+      const numeric = resolveNumeric(key, vars)
+      return Number.isNaN(numeric) ? key : `${numeric}`
+    })
+    return rendered
+  }
   const asString = expr.match(/^["'](.*)["']$/)
   if (asString) return asString[1]
   const listValue = parseList(expr, vars)
