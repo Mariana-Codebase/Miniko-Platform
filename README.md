@@ -10,6 +10,13 @@ Miniko is a platform that lets you paste code in Python, Java, TypeScript, or Ru
 - Multi-language detection: Python, TypeScript, Java, Rust
 - Visual execution steps with state and output
 - Light/Dark themes
+- Built-in UI autotests to verify expected outputs
+
+## Autotests
+The page includes an **Autotests** panel (in the footer) that runs a small suite of
+reference examples for each supported language and compares the actual output
+with the expected output. This helps you quickly confirm that the interpreter
+is working correctly and that the step trace completes as expected.
 
 ## Local setup
 ```bash

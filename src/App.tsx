@@ -1,3 +1,4 @@
+// Miniko main UI and interpreter glue, kept minimal and readable on purpose.
 import { useEffect, useMemo, useState } from 'react'
 import './style.css'
 import { useI18n } from './i18n'
@@ -53,6 +54,13 @@ type DetectedLanguage = {
 type TraceValue = number | string | number[]
 const MAX_STEPS = 40
 const LIMIT_MESSAGE_STEPS = MAX_STEPS
+type SelfTestResult = {
+  id: 'python' | 'java' | 'typescript' | 'rust'
+  label: string
+  expected: string
+  actual: string
+  ok: boolean
+}
 type VisualTraceEntry = MinikoTraceEntry & {
   before: Record<string, TraceValue>
   after: Record<string, TraceValue>
@@ -80,6 +88,7 @@ export function App() {
   const [genericTrace, setGenericTrace] = useState<VisualTraceEntry[]>([])
   const [activeStep, setActiveStep] = useState(0)
   const [limitReached, setLimitReached] = useState(false)
+  const [selfTests, setSelfTests] = useState<SelfTestResult[]>([])
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -100,6 +109,10 @@ export function App() {
     setLimitReached(truncated)
     setActiveStep(0)
   }, [code, locale, detected.id])
+
+  useEffect(() => {
+    setSelfTests(runSelfTests(locale))
+  }, [locale])
 
   return (
     <div className="app">
@@ -342,6 +355,30 @@ export function App() {
               {t('testRust')}
             </button>
           </div>
+        </div>
+        <div>
+          <h2>{t('selfTestTitle')}</h2>
+          <p className="self-test-desc">{t('selfTestDesc')}</p>
+          {selfTests.length === 0 ? (
+            <div className="empty">{t('selfTestEmpty')}</div>
+          ) : (
+            <div className="self-tests">
+              {selfTests.map((test) => (
+                <div key={test.id} className={`self-test ${test.ok ? 'ok' : 'fail'}`}>
+                  <span className="self-test-name">{test.label}</span>
+                  <span className="self-test-result">
+                    {test.ok ? t('selfTestOk') : t('selfTestFail')}
+                  </span>
+                  {!test.ok && (
+                    <span className="self-test-detail">
+                      {t('selfTestExpected', { value: test.expected })} ·{' '}
+                      {t('selfTestActual', { value: test.actual })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <h2>{t('principlesTitle')}</h2>
@@ -1259,7 +1296,8 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
         )
         return
       }
-      const result = resolveNumeric(expr, vars)
+      const operation = parseBinary(expr, vars)
+      const result = operation?.result ?? resolveNumeric(expr, vars)
       vars.set(target, result)
       pushTrace(
         text,
@@ -1267,7 +1305,8 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
         before,
         snapshotMap(vars),
         outputsBefore,
-        [...outputs]
+        [...outputs],
+        operation ? { ...operation, target } : undefined
       )
       return
     }
@@ -1297,6 +1336,19 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
     if (declAssign) {
       const target = declAssign[1]
       const expr = declAssign[2].trim()
+      const listValue = parseList(expr, vars)
+      if (listValue) {
+        vars.set(target, listValue)
+        pushTrace(
+          text,
+          locale === 'es' ? 'Declaración y asignación de lista' : 'Declaration and list assignment',
+          before,
+          snapshotMap(vars),
+          outputsBefore,
+          [...outputs]
+        )
+        return
+      }
       const arrayAccessMatch = expr.match(/^([A-Za-z_]\w*)\[([^\]]+)\]$/)
       if (arrayAccessMatch) {
         const arrayValue = vars.get(arrayAccessMatch[1])
@@ -1315,7 +1367,8 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
           return
         }
       }
-      const result = resolveNumeric(expr, vars)
+      const operation = parseBinary(expr, vars)
+      const result = operation?.result ?? resolveNumeric(expr, vars)
       vars.set(target, result)
       pushTrace(
         text,
@@ -1323,7 +1376,8 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
         before,
         snapshotMap(vars),
         outputsBefore,
-        [...outputs]
+        [...outputs],
+        operation ? { ...operation, target } : undefined
       )
       return
     }
@@ -1332,6 +1386,19 @@ function buildCStyleTrace(code: string, locale: 'es' | 'en'): VisualTraceEntry[]
     if (assign) {
       const target = assign[1]
       const expr = assign[2].trim()
+      const listValue = parseList(expr, vars)
+      if (listValue) {
+        vars.set(target, listValue)
+        pushTrace(
+          text,
+          locale === 'es' ? 'Asignación de lista' : 'List assignment',
+          before,
+          snapshotMap(vars),
+          outputsBefore,
+          [...outputs]
+        )
+        return
+      }
       const arrayAccessMatch = expr.match(/^([A-Za-z_]\w*)\[([^\]]+)\]$/)
       if (arrayAccessMatch) {
         const arrayValue = vars.get(arrayAccessMatch[1])
@@ -1735,19 +1802,25 @@ function splitPlus(input: string) {
   let current = ''
   let inSingle = false
   let inDouble = false
+  let inBacktick = false
   for (let i = 0; i < input.length; i += 1) {
     const char = input[i]
-    if (char === "'" && !inDouble) {
+    if (char === "'" && !inDouble && !inBacktick) {
       inSingle = !inSingle
       current += char
       continue
     }
-    if (char === '"' && !inSingle) {
+    if (char === '"' && !inSingle && !inBacktick) {
       inDouble = !inDouble
       current += char
       continue
     }
-    if (char === '+' && !inSingle && !inDouble) {
+    if (char === '`' && !inSingle && !inDouble) {
+      inBacktick = !inBacktick
+      current += char
+      continue
+    }
+    if (char === '+' && !inSingle && !inDouble && !inBacktick) {
       parts.push(current.trim())
       current = ''
       continue
@@ -1780,6 +1853,48 @@ function buildTraceForCodeWithLimit(code: string, languageId: string, locale: 'e
   }
   const truncated = fullTrace.length > MAX_STEPS
   return { trace: fullTrace.slice(0, MAX_STEPS), truncated }
+}
+
+function runSelfTests(locale: 'es' | 'en'): SelfTestResult[] {
+  const tests = [
+    {
+      id: 'python',
+      label: 'Python',
+      code: DEFAULT_CODE,
+      expected: 'Promedio alto: 81',
+    },
+    {
+      id: 'java',
+      label: 'Java',
+      code: DEFAULT_JAVA,
+      expected: 'Adultos: 4',
+    },
+    {
+      id: 'typescript',
+      label: 'TypeScript',
+      code: DEFAULT_TS,
+      expected: 'Total: 46, Promedio: 11.5',
+    },
+    {
+      id: 'rust',
+      label: 'Rust',
+      code: DEFAULT_RUST,
+      expected: 'Suma: 15, Promedio: 3',
+    },
+  ] as const
+
+  return tests.map((test) => {
+    const { trace } = buildTraceForCodeWithLimit(test.code, test.id, locale)
+    const outputs = trace.length ? trace[trace.length - 1].outputsAfter : []
+    const actual = outputs.join('\n') || ''
+    return {
+      id: test.id,
+      label: test.label,
+      expected: test.expected,
+      actual,
+      ok: actual === test.expected,
+    }
+  })
 }
 
 function parseNumericList(content: string, vars: Map<string, TraceValue>) {
@@ -1848,19 +1963,25 @@ function splitArgs(input: string) {
   let current = ''
   let inSingle = false
   let inDouble = false
+  let inBacktick = false
   for (let i = 0; i < input.length; i += 1) {
     const char = input[i]
-    if (char === "'" && !inDouble) {
+    if (char === "'" && !inDouble && !inBacktick) {
       inSingle = !inSingle
       current += char
       continue
     }
-    if (char === '"' && !inSingle) {
+    if (char === '"' && !inSingle && !inBacktick) {
       inDouble = !inDouble
       current += char
       continue
     }
-    if (char === ',' && !inSingle && !inDouble) {
+    if (char === '`' && !inSingle && !inDouble) {
+      inBacktick = !inBacktick
+      current += char
+      continue
+    }
+    if (char === ',' && !inSingle && !inDouble && !inBacktick) {
       args.push(current.trim())
       current = ''
       continue

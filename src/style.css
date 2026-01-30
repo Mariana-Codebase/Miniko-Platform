@@ -1,3 +1,4 @@
+/* Miniko UI styles */
 :root {
   font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
   line-height: 1.5;
@@ -1112,6 +1113,70 @@ body.theme-dark .test-codes .btn {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25), 0 8px 18px rgba(37, 99, 235, 0.35);
 }
 
+.self-tests {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.self-test-desc {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.self-test {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border: 2px solid #2a2a29;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+
+.self-test-name {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.self-test-result {
+  font-weight: 700;
+}
+
+.self-test-detail {
+  grid-column: 1 / -1;
+  color: #7c2d12;
+}
+
+.self-test.ok {
+  border-color: rgba(22, 163, 74, 0.6);
+  color: #14532d;
+}
+
+.self-test.fail {
+  border-color: rgba(220, 38, 38, 0.6);
+  color: #7f1d1d;
+}
+
+body.theme-dark .self-test {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.theme-dark .self-test-desc {
+  color: #e5e7eb;
+}
+
+body.theme-dark .self-test.ok {
+  color: #86efac;
+}
+
+body.theme-dark .self-test.fail {
+  color: #fca5a5;
+}
+
 .panel-footer ul {
   padding-left: 18px;
   margin: 12px 0 0 0;
@@ -1138,5 +1203,9 @@ body.theme-dark .test-codes .btn {
   .hero {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero-actions {
+    align-self: flex-end;
   }
 }
