@@ -1,3 +1,5 @@
+//WEB
+
 # Miniko
 
 Miniko is a platform that lets you paste code in multiple languages and see how it executes step by step, with visual traces, state, and output. It also includes Miniko AI for clear explanations.
