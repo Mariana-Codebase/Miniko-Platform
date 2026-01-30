@@ -2,7 +2,7 @@
 
 # Miniko
 
-Miniko is an educational visualizer that lets you paste code in Python, Java, TypeScript, or Rust and see how it executes step by step, with visual traces, state, and output. It focuses on clarity, short examples, and predictable behavior for learning.
+Miniko is an educational visualizer that lets you paste code in Python, Java, TypeScript, or Rust and see how it executes step by step, with visual traces, state, and output. It focuses on clarity, short examples, and predictable behavior for learning. Still in development.
 
 
 
