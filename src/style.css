@@ -450,6 +450,24 @@ pre {
   padding: 6px 0;
 }
 
+.limit-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 2px solid #b45309;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+body.theme-dark .limit-warning {
+  background: rgba(180, 83, 9, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+}
+
 .stepper-count {
   font-size: 12px;
   font-weight: 700;
