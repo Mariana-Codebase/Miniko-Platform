@@ -15,7 +15,7 @@ The interface is designed for desktop because it shows multiple panels at once,
 but it is responsive and adapts to smaller screens.
 
 How to use it
-1. Paste a code snippet into the editor.
+1. Paste a short code snippet into the editor.
 2. Miniko detects the language automatically.
 3. Use the step buttons to move forward and backward.
 4. Watch:
@@ -23,6 +23,12 @@ How to use it
    - Frames: local variables for the current step.
    - State: changes between steps.
    - Output: accumulated output.
+5. Check the Autotests panel to validate expected outputs.
+
+Autotests
+The Autotests panel (footer) runs reference examples for each supported language
+and compares the actual output with the expected output. If something changes in
+the interpreter, the panel makes it visible immediately.
 
 Language support (summary)
 Python
@@ -36,16 +42,17 @@ Java
 
 TypeScript
 - Assignments, simple arrays, basic operations.
-- console.log.
+- console.log with template strings.
 
 Rust
-- vec!, range for, and for over simple lists.
-- println!.
+- vec!, range for (.. and ..=), and for over simple lists.
+- println! with {} placeholders.
 
 Known limitations
 - No external libraries or real IO.
 - No complex data structures or async/concurrency.
 - Interpretation is approximate and designed for intro classes.
+- Long loops may be truncated by the step limit.
 
 Tips for reporting bugs
 - Provide the smallest code that reproduces the issue.
