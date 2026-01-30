@@ -42,7 +42,7 @@ fn main() {
   for i in 1..=5 {
     suma += i;
   }
-  let promedio = suma as f64 / 5.0;
+  let promedio = suma / 5;
   println!("Suma: {}, Promedio: {}", suma, promedio);
 }`
 type DetectedLanguage = {
@@ -51,7 +51,8 @@ type DetectedLanguage = {
   supported: boolean
 }
 type TraceValue = number | string | number[]
-const MAX_STEPS = 15
+const MAX_STEPS = 40
+const LIMIT_MESSAGE_STEPS = MAX_STEPS
 type VisualTraceEntry = MinikoTraceEntry & {
   before: Record<string, TraceValue>
   after: Record<string, TraceValue>
@@ -78,6 +79,7 @@ export function App() {
   const [code, setCode] = useState(DEFAULT_CODE)
   const [genericTrace, setGenericTrace] = useState<VisualTraceEntry[]>([])
   const [activeStep, setActiveStep] = useState(0)
+  const [limitReached, setLimitReached] = useState(false)
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -93,8 +95,9 @@ export function App() {
   const detected = useMemo(() => detectLanguage(code, locale), [code, locale])
 
   useEffect(() => {
-    const trace = buildTraceForCode(code, detected.id, locale)
+    const { trace, truncated } = buildTraceForCodeWithLimit(code, detected.id, locale)
     setGenericTrace(trace)
+    setLimitReached(truncated)
     setActiveStep(0)
   }, [code, locale, detected.id])
 
@@ -203,6 +206,12 @@ export function App() {
                 {t('stepForward')}
               </button>
             </div>
+            {limitReached && (
+              <div className="limit-warning">
+                <strong>{t('stepsLimitTitle', { limit: `${LIMIT_MESSAGE_STEPS}` })}</strong>
+                <span>{t('stepsLimitDesc')}</span>
+              </div>
+            )}
 
             {genericTrace.length === 0 ? (
               <div className="empty">{t('noTrace')}</div>
@@ -1761,13 +1770,16 @@ function compare(left: number, right: number, op: string) {
   return false
 }
 
-function buildTraceForCode(code: string, languageId: string, locale: 'es' | 'en') {
-  if (languageId === 'java') return buildJavaTrace(code, locale).slice(0, MAX_STEPS)
-  if (languageId === 'typescript' || languageId === 'rust') {
-    return buildCStyleTrace(code, locale).slice(0, MAX_STEPS)
+function buildTraceForCodeWithLimit(code: string, languageId: string, locale: 'es' | 'en') {
+  let fullTrace: VisualTraceEntry[] = []
+  if (languageId === 'java') fullTrace = buildJavaTrace(code, locale)
+  else if (languageId === 'typescript' || languageId === 'rust') {
+    fullTrace = buildCStyleTrace(code, locale)
+  } else if (languageId === 'python') {
+    fullTrace = buildGenericTrace(code, locale)
   }
-  if (languageId === 'python') return buildGenericTrace(code, locale).slice(0, MAX_STEPS)
-  return []
+  const truncated = fullTrace.length > MAX_STEPS
+  return { trace: fullTrace.slice(0, MAX_STEPS), truncated }
 }
 
 function parseNumericList(content: string, vars: Map<string, TraceValue>) {
